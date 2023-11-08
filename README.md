@@ -1,4 +1,4 @@
-# Peer-to-Peer with Centralized Index (P2P-CI) System
+# Peer-to-Peer with Centralized Index (P2P-CI) System NMA CUA THANG KIA
 
 This application is a P2P file sharing system with a centralized index (CI), in which peers who wish to download a file that they do not have in their hard drive, may download it from another active peer who does. All communication among peers or between a peer and the server will take place over TCP. 
 
