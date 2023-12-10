@@ -1,274 +1,213 @@
 import socket
+import json
 import threading
-import platform
-import mimetypes
-import os
+import ast
 import sys
-import time
-from pathlib import Path
+import os
 
 
-class MyException(Exception):
-    pass
+HEADER = 64
+PORT = 8080 # target port
+FORMAT = 'utf-8'
+DISCONNECT_MESSAGE = "!DISCONNECT"
+SERVER = "localhost"
+ADDR = (SERVER, PORT)
 
-
-class Client(object):
-    def __init__(self, serverhost='localhost', V='P2P-CI/1.0', DIR='rfc'):
-        self.SERVER_HOST = serverhost
-        self.SERVER_PORT = 7734
-        self.V = V
-        self.DIR = 'rfc'  # file directory
-        Path(self.DIR).mkdir(exist_ok=True)
-
-        self.UPLOAD_PORT = None
-        self.shareable = True
-
+class Client:
+    def __init__(self):
+        is_connected = False
+        self.__client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.FILE_PORT = None
+        self.__upload_online = True
+   
     def start(self):
-        # connect to server
-        print('Connecting to the server %s:%s' %
-              (self.SERVER_HOST, self.SERVER_PORT))
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            self.server.connect((self.SERVER_HOST, self.SERVER_PORT))
-        except Exception:
-            print('Server Not Available.')
-            return
-
-        print('Connected')
-        # upload
-        uploader_process = threading.Thread(target=self.init_upload)
-        uploader_process.start()
-        while self.UPLOAD_PORT is None:
+            self.__client_socket.connect(ADDR)
+        except:
+            print("Cannot connect to server")
+            sys.exit(0)
+        self.is_connected = True
+        
+        self.__send_connect_info()
+        
+        upload_thread = threading.Thread(target=self.__init_host)
+        upload_thread.start()
+        
+        while self.FILE_PORT is None:
             # wait until upload port is initialized
             pass
-        print('Listening on the upload port %s' % self.UPLOAD_PORT)
-
-        # interactive shell
-        self.cli()
-
-    def cli(self):
-        command_dict = {'1': self.add,
-                        '2': self.lookup,
-                        '3': self.listall,
-                        '4': self.pre_download,
-                        '5': self.shutdown}
-        while True:
-            try:
-                req = input('\n1: Add, 2: Look Up, 3: List All, 4: Download, 5: Shut Down\nEnter your request: ')
-                command_dict.setdefault(req, self.invalid_input)()
-            except MyException as e:
-                print(e)
-            except Exception:
-                print('System Error.')
-            except BaseException:
-                self.shutdown()
-
-    def init_upload(self):
-        # listen upload port
-        self.uploader = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.uploader.bind(('', 0))
-        self.UPLOAD_PORT = self.uploader.getsockname()[1]
-        self.uploader.listen(5)
-
-        while self.shareable:
-            requester, addr = self.uploader.accept()
-            handler = threading.Thread(
-                target=self.handle_upload, args=(requester, addr))
-            handler.start()
-        self.uploader.close()
-
-    def handle_upload(self, soc, addr):
-        header = soc.recv(1024).decode().splitlines()
+        print('Listening on the upload port %s' % self.FILE_PORT)
+        
+    def stop(self):
         try:
-            version = header[0].split()[-1]
-            num = header[0].split()[-2]
-            method = header[0].split()[0]
-            path = '%s/rfc%s.txt' % (self.DIR, num)
-            if version != self.V:
-                soc.sendall(str.encode(
-                    self.V + ' 505 P2P-CI Version Not Supported\n'))
-            elif not Path(path).is_file():
-                soc.sendall(str.encode(self.V + ' 404 Not Found\n'))
-            elif method == 'GET':
-                header = self.V + ' 200 OK\n'
-                header += 'Data: %s\n' % (time.strftime(
-                    "%a, %d %b %Y %H:%M:%S GMT", time.gmtime()))
-                header += 'OS: %s\n' % (platform.platform())
-                header += 'Last-Modified: %s\n' % (time.strftime(
-                    "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(os.path.getmtime(path))))
-                header += 'Content-Length: %s\n' % (os.path.getsize(path))
-                header += 'Content-Type: %s\n' % (
-                    mimetypes.MimeTypes().guess_type(path)[0])
-                soc.sendall(header.encode())
-                # Uploading
-                try:
-                    print('\nUploading...')
+            msg = DISCONNECT_MESSAGE
+            message = msg.encode(FORMAT)
+            msg_length = len(message)
+            header = f'DISCONNECT {msg_length}'
+            header = header.encode(FORMAT)
+            header += b' ' * (HEADER - len(header))
+            self.__client_socket.sendall(header + message)
+            self.is_connected = False
+            self.__upload_online = False
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0)
+        except:
+            pass
+        
+    def __send_connect_info(self):
+        hostname_data = socket.gethostname().encode(FORMAT)
+        header = 'CONNECT'
+        header += f' {len(hostname_data)}'
+        header = header.encode(FORMAT)
+        header += b' ' * (HEADER - len(header))
+        self.__client_socket.sendall(header + hostname_data)
+        
+    def publish(self, lname, fname):
+        lname_data = lname.encode(FORMAT)
+        fname_data = fname.encode(FORMAT)
+        file_port_data = str(self.FILE_PORT).encode(FORMAT)
+        hostname_data = socket.gethostname().encode(FORMAT)
+        header = 'PUBLISH'
+        header += f' {len(lname)} {len(fname)} {len(file_port_data)} {len(hostname_data)}'
+        header = header.encode(FORMAT)
+        header += b' ' * (HEADER - len(header))
+        self.__client_socket.sendall(header + lname_data + fname_data + file_port_data + hostname_data)
+        
+    def fetch(self, fname):
+        fname_data = fname.encode(FORMAT)
+        header = 'FETCH'
+        header += f" {len(fname)}"
+        header = header.encode(FORMAT)
+        header += b' ' * (HEADER - len(header))
+        self.__client_socket.sendall(header + fname_data)
+        self.__receive_response(fname)
+        
+    def __receive_response(self, fname):
+        response_header = self.__client_socket.recv(HEADER).decode(FORMAT)
+        response_header = response_header.split()
+        if response_header:
+            status_code = response_header[0]
+            if (status_code == '200'):
+                response_length = int(response_header[2])
+                response_data_json = self.__client_socket.recv(response_length).decode(FORMAT)
+                response_data = json.loads(response_data_json)
+                response_data = {tuple(ast.literal_eval(k)): v for k, v in response_data.items()}
+                print(response_data)
+                
+                host = next(iter(response_data))
+                lname = response_data[host]
+                
+                self.send_download_request(lname, host[0], host[3], fname)
+    
+    def __init_host(self):
+        self.__file_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.__file_host_socket.bind(('', 0))
+        self.FILE_PORT = self.__file_host_socket.getsockname()[1]
+        self.__file_host_socket.listen(5)
+        while self.__upload_online:
+            conn, addr = self.__file_host_socket.accept() # conn : connection between file host and client
+            thread = threading.Thread(target=self.__handle_request, args=(conn, addr))
+            thread.start()
+        self.__file_host_socket.close()
+    
+    def __handle_request(self, conn, addr):
+        print(f"[REQUEST] A CLIENT HAS SENT A REQUEST")
+        connected = True
+        while connected:
+            header = conn.recv(HEADER).decode(FORMAT)
+            if header:
+                header = header.split() 
+                req_type = header[0]
+                if (req_type == "DOWNLOAD"):
+                    lname_length = int(header[1])
+                    lname = conn.recv(lname_length).decode(FORMAT)
+                    self.__handle_send_file(conn, lname)
 
-                    send_length = 0
-                    with open(path, 'r') as file:
-                        to_send = file.read(1024)
-                        while to_send:
-                            send_length += len(to_send.encode())
-                            soc.sendall(to_send.encode())
-                            to_send = file.read(1024)
-                except Exception:
-                    raise MyException('Uploading Failed')
-                # total_length = int(os.path.getsize(path))
-                # print('send: %s | total: %s' % (send_length, total_length))
-                # if send_length < total_length:
-                #     raise MyException('Uploading Failed')
-                print('Uploading Completed.')
-                # Restore CLI
-                print(
-                    '\n1: Add, 2: Look Up, 3: List All, 4: Download\nEnter your request: ')
-            else:
-                raise MyException('Bad Request.')
+    def __handle_send_file(self, conn, lname):
+        try:
+            filesize = os.path.getsize(f'client/{lname}')
+            header = f"FILE {filesize}"
+            header = header.encode(FORMAT)
+            header += b' ' * (HEADER - len(header))
+            print('\nSending...')
+            conn.sendall(header)
+            path = 'client'
+            path += f'/{lname}'
+            with open(path, 'rb') as file:
+                while True:
+                    to_send = file.read(1024)
+                    if not to_send:
+                        break
+                    conn.sendall(to_send)
+                conn.sendall(b'</EOF>')
+                
+            print("File sent complete!")
+        
+        except FileNotFoundError:
+            raise Exception(f'File not found: {lname}')
         except Exception:
-            soc.sendall(str.encode(self.V + '  400 Bad Request\n'))
-        finally:
-            soc.close()
-
-    def add(self, num=None, title=None):
-        if not num:
-            num = input('Enter the RFC number: ')
-            if not num.isdigit():
-                raise MyException('Invalid Input.')
-            title = input('Enter the RFC title: ')
-        file = Path('%s/rfc%s.txt' % (self.DIR, num))
-        print(file)
-        if not file.is_file():
-            raise MyException('File Not Exit!')
-        msg = 'ADD RFC %s %s\n' % (num, self.V)
-        msg += 'Host: %s\n' % socket.gethostname()
-        msg += 'Post: %s\n' % self.UPLOAD_PORT
-        msg += 'Title: %s\n' % title
-        self.server.sendall(msg.encode())
-        res = self.server.recv(1024).decode()
-        print('Recieve response: \n%s' % res)
-
-    def lookup(self):
-        num = input('Enter the RFC number: ')
-        title = input('Enter the RFC title(optional): ')
-        msg = 'LOOKUP RFC %s %s\n' % (num, self.V)
-        msg += 'Host: %s\n' % socket.gethostname()
-        msg += 'Post: %s\n' % self.UPLOAD_PORT
-        msg += 'Title: %s\n' % title
-        self.server.sendall(msg.encode())
-        res = self.server.recv(1024).decode()
-        print('Recieve response: \n%s' % res)
-
-    def listall(self):
-        l1 = 'LIST ALL %s\n' % self.V
-        l2 = 'Host: %s\n' % socket.gethostname()
-        l3 = 'Post: %s\n' % self.UPLOAD_PORT
-        msg = l1 + l2 + l3
-        self.server.sendall(msg.encode())
-        res = self.server.recv(1024).decode()
-        print('Recieve response: \n%s' % res)
-
-    def pre_download(self):
-        num = input('Enter the RFC number: ')
-        msg = 'LOOKUP RFC %s %s\n' % (num, self.V)
-        msg += 'Host: %s\n' % socket.gethostname()
-        msg += 'Post: %s\n' % self.UPLOAD_PORT
-        msg += 'Title: Unkown\n'
-        self.server.sendall(msg.encode())
-        lines = self.server.recv(1024).decode().splitlines()
-        if lines[0].split()[1] == '200':
-            # Choose a peer
-            print('Available peers: ')
-            for i, line in enumerate(lines[1:]):
-                line = line.split()
-                print('%s: %s:%s' % (i + 1, line[-2], line[-1]))
-
+            raise Exception('Uploading Failed')
+    
+    def send_download_request(self, lname, host_addr, host_port, fname):
+        self.file_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.file_client_socket.connect((host_addr, host_port))
+        lname_data = lname.encode(FORMAT)
+        header = 'DOWNLOAD'
+        header += f' {len(lname)}'
+        header = header.encode(FORMAT)
+        header += b' ' * (HEADER - len(header))
+        self.file_client_socket.sendall(header + lname_data)
+        self.__handle_write_file(self.file_client_socket, fname)
+    
+    def __handle_write_file(self, conn, fname):
+        header = conn.recv(HEADER).decode(FORMAT)
+        header = header.split()
+        if header[0] == "FILE":
+            filesize = int(header[1])
+            print("I received the file!!")
+            path = f"download/{fname}"
+            file_bytes = b''
             try:
-                idx = int(input('Choose one peer to download: '))
-                title = lines[idx].rsplit(None, 2)[0].split(None, 2)[-1]
-                peer_host = lines[idx].split()[-2]
-                peer_port = int(lines[idx].split()[-1])
+                with open(path, 'wb') as file:
+                    done = False
+                    while not done:
+                        if file_bytes[-6:] == b'</EOF>':
+                            done = True  # End of file
+                        else:
+                            chunk = conn.recv(1024)  # Receive 1 KB chunks
+                            file_bytes += chunk
+                    file.write(file_bytes[:-6])
+                    file.close()
+                
             except Exception:
-                raise MyException('Invalid Input.')
-            # exclude self
-            if((peer_host, peer_port) == (socket.gethostname(), self.UPLOAD_PORT)):
-                raise MyException('Do not choose yourself.')
-            # send get request
-            self.download(num, title, peer_host, peer_port)
-        elif lines[0].split()[1] == '400':
-            raise MyException('Invalid Input.')
-        elif lines[0].split()[1] == '404':
-            raise MyException('File Not Available.')
-        elif lines[0].split()[1] == '500':
-            raise MyException('Version Not Supported.')
+                print("Downloading Failed")
+                raise Exception('Downloading Failed')
+            print('Downloading Completed.')
+            
+            
+    
+        
 
-    def download(self, num, title, peer_host, peer_port):
-        try:
-            # make connnection
-            soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # connect_ex return errors
-            if soc.connect_ex((peer_host, peer_port)):
-                # print('Try Local Network...')
-                # if soc.connect_ex(('localhost', peer_port)):
-                raise MyException('Peer Not Available')
-            # make request
-            msg = 'GET RFC %s %s\n' % (num, self.V)
-            msg += 'Host: %s\n' % socket.gethostname()
-            msg += 'OS: %s\n' % platform.platform()
-            soc.sendall(msg.encode())
+# client = Client()
+# client.start()
 
-            # Downloading
+# while client.is_connected:
+#     action = input("Enter action (publish/fetch/disconnect): ").lower()
 
-            header = soc.recv(1024).decode()
-            print('Recieve response header: \n%s' % header)
-            header = header.splitlines()
-            if header[0].split()[-2] == '200':
-                path = '%s/rfc%s.txt' % (self.DIR, num)
-                print('Downloading...')
-                try:
-                    with open(path, 'w') as file:
-                        content = soc.recv(1024)
-                        while content:
-                            file.write(content.decode())
-                            content = soc.recv(1024)
-                except Exception:
-                    raise MyException('Downloading Failed')
+#     if action == "publish":
+#         lname = input("Enter local name: ")
+#         fname = input("Enter file name: ")
+#         client.publish(lname, fname)
 
-                total_length = int(header[4].split()[1])
-                # print('write: %s | total: %s' % (os.path.getsize(path), total_length))
+#     elif action == "fetch":
+#         fname = input("Enter file name to fetch: ")
+#         client.fetch(fname)
 
-                if os.path.getsize(path) < total_length:
-                    raise MyException('Downloading Failed')
+#     elif action == "disconnect":
+#         client.stop()
+#         break
 
-                print('Downloading Completed.')
-                # Share file, send ADD request
-                print('Sending ADD request to share...')
-                if self.shareable:
-                    self.add(num, title)
-            elif header[0].split()[1] == '400':
-                raise MyException('Invalid Input.')
-            elif header[0].split()[1] == '404':
-                raise MyException('File Not Available.')
-            elif header[0].split()[1] == '500':
-                raise MyException('Version Not Supported.')
-        finally:
-            soc.close()
-            # Restore CLI
-          #  print('\n1: Add, 2: Look Up, 3: List All, 4: Download\nEnter your request: ')
-
-    def invalid_input(self):
-        raise MyException('Invalid Input.')
-
-    def shutdown(self):
-        print('\nShutting Down...')
-        self.server.close()
-        try:
-            sys.exit(0)
-        except SystemExit:
-            os._exit(0)
-
-
-if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        client = Client(sys.argv[1])
-    else:
-        client = Client()
-    client.start()
+#     else:
+#         print("Invalid action. Please enter 'publish', 'fetch', or 'disconnect'.")
