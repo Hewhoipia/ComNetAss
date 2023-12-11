@@ -61,6 +61,7 @@ class client_GUI():
         self.exit_button.grid(row=4, column=0, pady=12, padx=10, columnspan=3)
         
     def handle_fetch(self):
+        self.fetch_entry2.delete(0, customtkinter.END)
         client_run.choose_file_to_fetch=self.fetch_entry2.get()
         client_run.fetch(self.fetch_entry1.get())
 

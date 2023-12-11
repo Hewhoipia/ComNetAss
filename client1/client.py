@@ -10,7 +10,7 @@ HEADER = 64
 PORT = 8080 # target port
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "192.168.172.194"
+SERVER = '192.168.172.19'
 ADDR = (SERVER, PORT)
 
 class Client:
@@ -106,14 +106,15 @@ class Client:
                 response_data = json.loads(response_data_json)
                 response_data = {tuple(ast.literal_eval(k)): v for k, v in response_data.items()}
                 keys_list = list(response_data.keys())
-                for index, element in enumerate(response_data.items()):
-                    key, value = element
-                    print(f"{index}. Host: {key}, Value: {value}\n")
-                if(not (self.choose_file_to_fetch and self.choose_file_to_fetch.strip())):
+                if(self.choose_file_to_fetch and self.choose_file_to_fetch.strip()):
                     host = keys_list[int(self.choose_file_to_fetch)] #keys_list[index]
                     lname = response_data[host]
                     self.send_download_request(lname, host[0], host[3], fname)
                     self.choose_file_to_fetch=''
+                else:
+                    for index, element in enumerate(response_data.items()):
+                        key, value = element
+                        print(f"{index}. Host: {key}, Value: {value}\n")
     
     def __init_host(self):
         self.__file_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
