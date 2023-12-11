@@ -16,6 +16,7 @@ class server_GUI():
         self.root.geometry("500x400")
         self.frame=customtkinter.CTkFrame(master=self.root, fg_color="transparent")
         self.frame.pack(pady=0, padx=0, fill="both", expand=True)
+        self.frame.grid_rowconfigure((0, 1, 2, 3, 4), weight=1)
         self.frame.grid_columnconfigure((0, 1), weight=1)
         
         self.output = customtkinter.CTkTextbox(master=self.frame, width=450, height=150, state="disabled", scrollbar_button_color="#000")

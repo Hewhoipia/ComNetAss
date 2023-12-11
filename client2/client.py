@@ -19,6 +19,7 @@ class Client:
         self.__client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.FILE_PORT = None
         self.__upload_online = True
+        self.choose_file_to_fetch=None
    
     def start(self):
         try:
@@ -94,12 +95,15 @@ class Client:
                 response_data_json = self.__client_socket.recv(response_length).decode(FORMAT)
                 response_data = json.loads(response_data_json)
                 response_data = {tuple(ast.literal_eval(k)): v for k, v in response_data.items()}
-                print(response_data)
-                
-                host = next(iter(response_data))
-                lname = response_data[host]
-                
-                self.send_download_request(lname, host[0], host[3], fname)
+                keys_list = list(response_data.keys())
+                for index, element in enumerate(response_data.items()):
+                    key, value = element
+                    print(f"{index}. Host: {key}, Value: {value}\n")
+                if(self.choose_file_to_fetch is not None):
+                    host = keys_list[self.choose_file_to_fetch] #keys_list[index]
+                    lname = response_data[host]
+                    self.send_download_request(lname, host[0], host[3], fname)
+                    self.choose_file_to_fetch=None
     
     def __init_host(self):
         self.__file_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
