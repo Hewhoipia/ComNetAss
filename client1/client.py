@@ -131,7 +131,7 @@ class Client:
             header = f"FILE {filesize}"
             header = header.encode(FORMAT)
             header += b' ' * (HEADER - len(header))
-            print('\nSending...')
+            print('Sending...')
             conn.sendall(header)
             path = 'files'
             path += f'/{lname}'
@@ -167,6 +167,9 @@ class Client:
         if header[0] == "FILE":
             filesize = int(header[1])
             print("I received the file!!")
+            folder = "download"
+            if not os.path.exists(folder):
+                os.makedirs(folder)
             path = f"download/{fname}"
             file_bytes = b''
             try:

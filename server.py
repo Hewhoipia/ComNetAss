@@ -45,7 +45,7 @@ class Server:
                     fname = conn.recv(fname_length).decode(FORMAT)
                     client_file_port = conn.recv(client_file_port_length).decode(FORMAT)
                     client_file_port = int(client_file_port)
-                    print(f"[PUBLISH] {addr} has published a file {fname}!\n")
+                    print(f"[PUBLISH] {addr} has published a file {fname}!")
                     hostname = conn.recv(hostname_length).decode(FORMAT)
                     self.__handle_client_publish(addr, fname, lname, client_file_port, hostname)
                     
@@ -82,9 +82,9 @@ class Server:
             print(f"[ACTIVE CONNECTION] {threading.active_count() - 2}\n")
                     
     def start(self):
-        print("[STARTING] Server is starting...\n")
+        print("[STARTING] Server is starting...")
         self.__server_socket.listen()
-        print(f"[LISTENING] Server is listening on {SERVER}\n")
+        print(f"[LISTENING] Server is listening on {SERVER}")
         # thread = threading.Thread(target=self.server_ui)
         # thread.start()
         self.server_run=True
@@ -118,7 +118,7 @@ class Server:
     
     def __handle_client_fetch(self, fname, addr, conn):
         if fname not in self.__file_repo:
-            print("Not host has this file")
+            print("No host has this file")
         else:
             file_host_addr = self.__file_repo[fname]
             if (addr in file_host_addr):

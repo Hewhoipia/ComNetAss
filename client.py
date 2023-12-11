@@ -95,7 +95,6 @@ class Client:
                 response_data = json.loads(response_data_json)
                 response_data = {tuple(ast.literal_eval(k)): v for k, v in response_data.items()}
                 print(response_data)
-                
                 host = next(iter(response_data))
                 lname = response_data[host]
                 
@@ -131,7 +130,7 @@ class Client:
             header = f"FILE {filesize}"
             header = header.encode(FORMAT)
             header += b' ' * (HEADER - len(header))
-            print('\nSending...')
+            print('Sending...')
             conn.sendall(header)
             path = 'files'
             path += f'/{lname}'
