@@ -112,6 +112,7 @@ class Client:
                     self.send_download_request(lname, host[0], host[3], fname)
                     self.choose_file_to_fetch=''
                 else:
+                    print ("Please choose host number:\n")
                     for index, element in enumerate(response_data.items()):
                         key, value = element
                         print(f"{index}. Host: {key}, Value: {value}\n")

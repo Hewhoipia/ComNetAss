@@ -115,6 +115,14 @@ class Client:
                     for index, element in enumerate(response_data.items()):
                         key, value = element
                         print(f"{index}. Host: {key}, Value: {value}\n")
+            elif (status_code == '404'):
+                response_length = int(response_header[2])
+                response_data = self.__client_socket.recv(response_length).decode(FORMAT)
+                print(response_data)
+            elif (status_code == '204'):
+                response_length = int(response_header[2])
+                response_data = self.__client_socket.recv(response_length).decode(FORMAT)
+                print(response_data)
     
     def __init_host(self):
         self.__file_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
