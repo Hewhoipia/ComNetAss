@@ -45,7 +45,6 @@ class Server:
                     fname = conn.recv(fname_length).decode(FORMAT)
                     client_file_port = conn.recv(client_file_port_length).decode(FORMAT)
                     client_file_port = int(client_file_port)
-                    print(f"[PUBLISH] {addr} has published a file {fname}!")
                     hostname = conn.recv(hostname_length).decode(FORMAT)
                     self.__handle_client_publish(addr, fname, lname, client_file_port, hostname, conn)
                     
@@ -118,6 +117,7 @@ class Server:
             if (lname, fname) not in self.__client_file_repo[client_info]:
                 self.__client_file_repo[client_info].append((lname, fname))
                 response_data = 'Publish successfully!'
+                print(f"[PUBLISH] {addr} has published a file {fname}!")
                 response_data = response_data.encode(FORMAT)
                 response_length = len(response_data)
                 header = f'201 CREATED {response_length}'
