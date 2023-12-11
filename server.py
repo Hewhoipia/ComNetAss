@@ -8,7 +8,7 @@ import os
 HEADER = 64
 PORT = 8080 # server port
 # get IPv4
-SERVER = '192.168.172.19'
+SERVER = '192.168.172.194'
 ADDR = (SERVER, PORT)
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
@@ -47,7 +47,7 @@ class Server:
                     client_file_port = int(client_file_port)
                     print(f"[PUBLISH] {addr} has published a file {fname}!")
                     hostname = conn.recv(hostname_length).decode(FORMAT)
-                    self.__handle_client_publish(addr, fname, lname, client_file_port, hostname)
+                    self.__handle_client_publish(addr, fname, lname, client_file_port, hostname, conn)
                     
                 elif (req_type == "FETCH"):
                     fname_length = int(header[1])
@@ -100,16 +100,39 @@ class Server:
     def __handle_client_connect(self, addr, hostname):
         self.__client_list.append((addr[0], addr[1], hostname))
         
-    def __handle_client_publish(self, addr, fname, lname, client_file_port, hostname): # add fname to __client_file_repo
+    def __handle_client_publish(self, addr, fname, lname, client_file_port, hostname, conn): # add fname to __client_file_repo
         client_info = (addr[0], addr[1], hostname, client_file_port)
         
+        if (not (lname and lname.strip()) or not (fname and fname.strip())):
+            response_data = 'One of the input is empty!'
+            response_data = response_data.encode(FORMAT)
+            response_length = len(response_data)
+            header = f'400 ERROR {response_length}'
+            header = header.encode(FORMAT)
+            header += b' ' * (HEADER - len(header))
+            conn.sendall(header + response_data)
+            return
         if client_info not in self.__client_file_repo:
             self.__client_file_repo[client_info] = []
         with self.__client_file_repo_lock:
             if (lname, fname) not in self.__client_file_repo[client_info]:
                 self.__client_file_repo[client_info].append((lname, fname))
+                response_data = 'Publish successfully!'
+                response_data = response_data.encode(FORMAT)
+                response_length = len(response_data)
+                header = f'201 CREATED {response_length}'
+                header = header.encode(FORMAT)
+                header += b' ' * (HEADER - len(header))
+                conn.sendall(header + response_data)
             else:
                 print("You already uploaded this file")
+                response_data = 'You already published this file!'
+                response_data = response_data.encode(FORMAT)
+                response_length = len(response_data)
+                header = f'204 NO_CONTENT {response_length}'
+                header = header.encode(FORMAT)
+                header += b' ' * (HEADER - len(header))
+                conn.sendall(header + response_data)
                 
         if fname not in self.__file_repo:
             self.__file_repo[fname] = {}
@@ -118,11 +141,24 @@ class Server:
     
     def __handle_client_fetch(self, fname, addr, conn):
         if fname not in self.__file_repo:
-            print("No host has this file")
+            response_data = 'No host has that file'
+            response_data = response_data.encode(FORMAT)
+            response_length = len(response_data)
+            header = f'404 NOT_FOUND {response_length}'
+            header = header.encode(FORMAT)
+            header += b' ' * (HEADER - len(header))
+            conn.sendall(header + response_data)
+            
         else:
             file_host_addr = self.__file_repo[fname]
-            if (addr in file_host_addr):
-                print("You already have this file in your repository!")
+            if any(ip == addr[0] and port == addr[1] for ip, port, _, _ in file_host_addr):
+                response_data = 'You already have this file!'
+                response_data = response_data.encode(FORMAT)
+                response_length = len(response_data)
+                header = f'204 NO_CONTENT {response_length}'
+                header = header.encode(FORMAT)
+                header += b' ' * (HEADER - len(header))
+                conn.sendall(header + response_data)
             else:
                 # print(f"Host {file_host_addr} has this file: {fname}!")
                 response_data = (json.dumps({str(k): v for k, v in file_host_addr.items()})).encode(FORMAT)

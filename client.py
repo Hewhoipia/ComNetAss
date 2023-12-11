@@ -10,7 +10,7 @@ HEADER = 64
 PORT = 8080 # target port
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "192.168.172.19"
+SERVER = "192.168.172.194"
 ADDR = (SERVER, PORT)
 
 class Client:
@@ -74,6 +74,7 @@ class Client:
         header = header.encode(FORMAT)
         header += b' ' * (HEADER - len(header))
         self.__client_socket.sendall(header + lname_data + fname_data + file_port_data + hostname_data)
+        self.__receive_publish_response()
         
     def fetch(self, fname):
         fname_data = fname.encode(FORMAT)
@@ -82,9 +83,18 @@ class Client:
         header = header.encode(FORMAT)
         header += b' ' * (HEADER - len(header))
         self.__client_socket.sendall(header + fname_data)
-        self.__receive_response(fname)
+        self.__receive_fetch_response(fname)
         
-    def __receive_response(self, fname):
+    def __receive_publish_response(self):
+        response_header = self.__client_socket.recv(HEADER).decode(FORMAT)
+        response_header = response_header.split()
+        if response_header:
+            status_code = response_header[0]
+            response_length = int(response_header[2])
+            response_data = self.__client_socket.recv(response_length).decode(FORMAT)
+            print(response_data)
+    
+    def __receive_fetch_response(self, fname):
         response_header = self.__client_socket.recv(HEADER).decode(FORMAT)
         response_header = response_header.split()
         if response_header:
@@ -97,8 +107,15 @@ class Client:
                 print(response_data)
                 host = next(iter(response_data))
                 lname = response_data[host]
-                
                 self.send_download_request(lname, host[0], host[3], fname)
+            elif (status_code == '404'):
+                response_length = int(response_header[2])
+                response_data = self.__client_socket.recv(response_length).decode(FORMAT)
+                print(response_data)
+            elif (status_code == '204'):
+                response_length = int(response_header[2])
+                response_data = self.__client_socket.recv(response_length).decode(FORMAT)
+                print(response_data)
     
     def __init_host(self):
         self.__file_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
