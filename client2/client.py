@@ -99,11 +99,11 @@ class Client:
                 for index, element in enumerate(response_data.items()):
                     key, value = element
                     print(f"{index}. Host: {key}, Value: {value}\n")
-                if(self.choose_file_to_fetch is not None):
-                    host = keys_list[self.choose_file_to_fetch] #keys_list[index]
+                if(not (self.choose_file_to_fetch and self.choose_file_to_fetch.strip())):
+                    host = keys_list[int(self.choose_file_to_fetch)] #keys_list[index]
                     lname = response_data[host]
                     self.send_download_request(lname, host[0], host[3], fname)
-                    self.choose_file_to_fetch=None
+                    self.choose_file_to_fetch=''
     
     def __init_host(self):
         self.__file_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

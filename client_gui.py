@@ -33,10 +33,6 @@ class client_GUI():
             sys.exit(0)
         except SystemExit:
             os._exit(0)
-            
-    def handle_fetch(self, index):
-        client_run.choose_file_to_fetch=self.fetch_entry2.get()
-        client_run.fetch(self.fetch_entry1.get())
     
     def body(self):
         
@@ -55,14 +51,18 @@ class client_GUI():
         self.fetch_entry1=customtkinter.CTkEntry(master=self.frame, placeholder_text="Please enter fname", width=150)
         self.fetch_entry1.grid(row=2, column=0, pady=12, padx=10)
         
-        self.fetch_entry2=customtkinter.CTkEntry(master=self.frame, placeholder_text="Please enter host number", width=150)
+        self.fetch_entry2=customtkinter.CTkEntry(master=self.frame, placeholder_text="Choose host number", width=150)
         self.fetch_entry2.grid(row=2, column=1, pady=12, padx=10)
 
-        self.fetch_button=customtkinter.CTkButton(master=self.frame, text="FETCH", command=self.handle_fetch(self.fetch_entry2.get()), width=100)
+        self.fetch_button=customtkinter.CTkButton(master=self.frame, text="FETCH", command=lambda: self.handle_fetch(), width=100)
         self.fetch_button.grid(row=2, column=2, pady=12, padx=10)
         
         self.exit_button = customtkinter.CTkButton(master=self.frame, text="EXIT", command=lambda: self.exit_sys(), width=80, fg_color="red")
         self.exit_button.grid(row=4, column=0, pady=12, padx=10, columnspan=3)
+        
+    def handle_fetch(self):
+        client_run.choose_file_to_fetch=self.fetch_entry2.get()
+        client_run.fetch(self.fetch_entry1.get())
 
 class PrintRedirector:
     def __init__(self):
