@@ -127,7 +127,7 @@ class Client:
 
     def __handle_send_file(self, conn, lname):
         try:
-            filesize = os.path.getsize(f'client/{lname}')
+            filesize = os.path.getsize(f'files/{lname}')
             header = f"FILE {filesize}"
             header = header.encode(FORMAT)
             header += b' ' * (HEADER - len(header))
@@ -167,6 +167,9 @@ class Client:
         if header[0] == "FILE":
             filesize = int(header[1])
             print("I received the file!!")
+            folder = "download"
+            if not os.path.exists(folder):
+                os.makedirs(folder)
             path = f"download/{fname}"
             file_bytes = b''
             try:

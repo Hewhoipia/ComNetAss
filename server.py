@@ -45,6 +45,7 @@ class Server:
                     fname = conn.recv(fname_length).decode(FORMAT)
                     client_file_port = conn.recv(client_file_port_length).decode(FORMAT)
                     client_file_port = int(client_file_port)
+                    print(f"[PUBLISH] {addr} has published a file {fname}!\n")
                     hostname = conn.recv(hostname_length).decode(FORMAT)
                     self.__handle_client_publish(addr, fname, lname, client_file_port, hostname)
                     
@@ -56,7 +57,7 @@ class Server:
                 elif (req_type == "CONNECT"):
                     hostname_length = int(header[1])
                     hostname = conn.recv(hostname_length).decode(FORMAT)
-                    print(f"\n[NEW CONNECTION] {addr} {hostname} connected.")
+                    print(f"[NEW CONNECTION] {addr} {hostname} connected.\n")
                     self.__handle_client_connect(addr, hostname)
                     
                 elif (req_type == "DISCONNECT"):
@@ -70,7 +71,7 @@ class Server:
                         # Remove the specific tuple based on IP and port
                         self.__client_list = [client for client in self.__client_list if (client[0] != ip_to_remove) and (client[1] != port_to_remove)]
                     
-                    print(f"{addr} {msg}")
+                    print(f"{addr} {msg}\n")
         conn.close()
         
     def __handle_request(self):
@@ -78,12 +79,12 @@ class Server:
             conn, addr = self.__server_socket.accept()
             thread = threading.Thread(target=self.__handle_client, args=(conn, addr))
             thread.start()
-            print(f"[ACTIVE CONNECTION] {threading.active_count() - 2}")
+            print(f"[ACTIVE CONNECTION] {threading.active_count() - 2}\n")
                     
     def start(self):
-        print("[STARTING] Server is starting...")
+        print("[STARTING] Server is starting...\n")
         self.__server_socket.listen()
-        print(f"[LISTENING] Server is listening on {SERVER}")
+        print(f"[LISTENING] Server is listening on {SERVER}\n")
         # thread = threading.Thread(target=self.server_ui)
         # thread.start()
         self.server_run=True

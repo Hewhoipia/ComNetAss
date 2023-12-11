@@ -127,7 +127,7 @@ class Client:
 
     def __handle_send_file(self, conn, lname):
         try:
-            filesize = os.path.getsize(f'client/{lname}')
+            filesize = os.path.getsize(f'files/{lname}')
             header = f"FILE {filesize}"
             header = header.encode(FORMAT)
             header += b' ' * (HEADER - len(header))
