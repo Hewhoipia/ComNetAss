@@ -19,6 +19,7 @@ class Client:
         self.__client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.FILE_PORT = None
         self.__upload_online = True
+        self.choose_file_to_fetch=None
    
     def start(self):
         try:
@@ -104,18 +105,15 @@ class Client:
                 response_data_json = self.__client_socket.recv(response_length).decode(FORMAT)
                 response_data = json.loads(response_data_json)
                 response_data = {tuple(ast.literal_eval(k)): v for k, v in response_data.items()}
-                print(response_data)
-                host = next(iter(response_data))
-                lname = response_data[host]
-                self.send_download_request(lname, host[0], host[3], fname)
-            elif (status_code == '404'):
-                response_length = int(response_header[2])
-                response_data = self.__client_socket.recv(response_length).decode(FORMAT)
-                print(response_data)
-            elif (status_code == '204'):
-                response_length = int(response_header[2])
-                response_data = self.__client_socket.recv(response_length).decode(FORMAT)
-                print(response_data)
+                keys_list = list(response_data.keys())
+                for index, element in enumerate(response_data.items()):
+                    key, value = element
+                    print(f"{index}. Host: {key}, Value: {value}\n")
+                if(not (self.choose_file_to_fetch and self.choose_file_to_fetch.strip())):
+                    host = keys_list[int(self.choose_file_to_fetch)] #keys_list[index]
+                    lname = response_data[host]
+                    self.send_download_request(lname, host[0], host[3], fname)
+                    self.choose_file_to_fetch=''
     
     def __init_host(self):
         self.__file_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
