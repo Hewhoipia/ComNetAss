@@ -8,7 +8,7 @@ import os
 HEADER = 64
 PORT = 8080 # server port
 # get IPv4
-SERVER = socket.gethostbyname(socket.gethostname())
+SERVER = '192.168.172.19'
 ADDR = (SERVER, PORT)
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
@@ -27,7 +27,7 @@ class Server:
         self.server_run = False
         
     def __handle_client(self, conn, addr): # mock
-        print(f"\n[NEW CONNECTION] {addr} {socket.gethostbyaddr(addr[0])[0]} connected.")
+        
         connected = True
         while connected: # (PUBLISH len(lname) len(fname)            lname fname
             # client sendall
@@ -56,6 +56,7 @@ class Server:
                 elif (req_type == "CONNECT"):
                     hostname_length = int(header[1])
                     hostname = conn.recv(hostname_length).decode(FORMAT)
+                    print(f"\n[NEW CONNECTION] {addr} {hostname} connected.")
                     self.__handle_client_connect(addr, hostname)
                     
                 elif (req_type == "DISCONNECT"):

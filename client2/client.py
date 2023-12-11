@@ -10,7 +10,7 @@ HEADER = 64
 PORT = 8080 # target port
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "localhost"
+SERVER = "192.168.172.19"
 ADDR = (SERVER, PORT)
 
 class Client:
@@ -19,7 +19,6 @@ class Client:
         self.__client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.FILE_PORT = None
         self.__upload_online = True
-        self.file_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
    
     def start(self):
         try:
@@ -134,7 +133,7 @@ class Client:
             header += b' ' * (HEADER - len(header))
             print('\nSending...')
             conn.sendall(header)
-            path = 'client'
+            path = 'files'
             path += f'/{lname}'
             with open(path, 'rb') as file:
                 while True:
@@ -152,6 +151,7 @@ class Client:
             raise Exception('Uploading Failed')
     
     def send_download_request(self, lname, host_addr, host_port, fname):
+        self.file_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.file_client_socket.connect((host_addr, host_port))
         lname_data = lname.encode(FORMAT)
         header = 'DOWNLOAD'
@@ -166,7 +166,7 @@ class Client:
         header = header.split()
         if header[0] == "FILE":
             filesize = int(header[1])
-            print("I receiveed the file!!")
+            print("I received the file!!")
             path = f"download/{fname}"
             file_bytes = b''
             try:
@@ -182,6 +182,7 @@ class Client:
                     file.close()
                 
             except Exception:
+                print("Downloading Failed")
                 raise Exception('Downloading Failed')
             print('Downloading Completed.')
             

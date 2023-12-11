@@ -18,7 +18,7 @@ class server_GUI():
         self.frame.pack(pady=0, padx=0, fill="both", expand=True)
         self.frame.grid_columnconfigure((0, 1), weight=1)
         
-        self.output = customtkinter.CTkTextbox(master=self.frame, width=400, height=150, state="disabled", scrollbar_button_color="#000")
+        self.output = customtkinter.CTkTextbox(master=self.frame, width=450, height=150, state="disabled", scrollbar_button_color="#000")
         self.output.grid(row=3, column=0, pady=12, padx=10, columnspan=2)
         
     def start(self):

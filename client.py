@@ -10,7 +10,7 @@ HEADER = 64
 PORT = 8080 # target port
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "localhost"
+SERVER = "192.168.172.19"
 ADDR = (SERVER, PORT)
 
 class Client:
@@ -133,7 +133,7 @@ class Client:
             header += b' ' * (HEADER - len(header))
             print('\nSending...')
             conn.sendall(header)
-            path = 'client'
+            path = 'files'
             path += f'/{lname}'
             with open(path, 'rb') as file:
                 while True:
